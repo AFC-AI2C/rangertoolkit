@@ -11,15 +11,20 @@
 #' ## survival example
 #'
 #' lung_clean <- na.omit(survival::lung)
-#' rsf <- ranger::ranger(survival::Surv(time, status) ~ ., data = lung_clean, num.trees = 100)
+#' rsf <- ranger::ranger(survival::Surv(time, status) ~ .,
+#'                       data = lung_clean, num.trees = 100, keep.inbag=TRUE)
 #' score_oob(rsf, lung_clean[, -c(2, 3)], survival::Surv(lung_clean$time, lung_clean$status))
 score_oob <- function(model, X, y) {
+  if(!inherits(model, c("ranger"))) {
+    stop("Model is not from the ranger package.")
+  }
+
   num_trees <- seq(2, model$num.trees, 50)
 
   # get inbag counts
-  inbag_counts <-
-    model$inbag.counts |>
-    dplyr::bind_cols()
+  inbag_counts <- model$inbag.counts
+  names(inbag_counts) <- 1:model$num.trees
+  inbag_counts <- dplyr::bind_cols(inbag_counts)
 
   # process data n observations at a time
   chf_list <- c()
