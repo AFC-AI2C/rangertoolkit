@@ -15,5 +15,7 @@ Imports:
   tibble,
   yardstick
 Suggests:
-  survival,
-  ranger
+    survival,
+    ranger,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

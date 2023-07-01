@@ -86,6 +86,4 @@ calculate_cindex <- function(preds, y) {
   ) |>
     dplyr::select(.estimate) |>
     dplyr::pull()
-
-  c_index <- 1 - c_index
 }
