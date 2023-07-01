@@ -46,7 +46,7 @@ score_oob <- function(model, X, y) {
 
 calculate_chf <- function(model, inbag_counts, X, y, n_tree_seq) {
   # make predictions
-  p <- predict(
+  p <- stats::predict(
     model,
     data=X,
     predict.all=TRUE
@@ -76,12 +76,12 @@ calculate_chf <- function(model, inbag_counts, X, y, n_tree_seq) {
 calculate_cindex <- function(preds, y) {
   result <- tibble::tibble(
     preds = preds,
-    surv_obs = y
+    y = y
   )
 
   c_index <- yardstick::concordance_survival(
     data = result,
-    truth = surv_obs,
+    truth = y,
     estimate = preds
   ) |>
     dplyr::select(.estimate) |>
