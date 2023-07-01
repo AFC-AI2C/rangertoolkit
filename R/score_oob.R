@@ -11,7 +11,7 @@
 #' ## survival example
 #'
 #' lung_clean <- na.omit(survival::lung)
-#' rsf <- ranger::ranger(survival::Surv(time, status) ~., data=lung_clean, num.trees=100)
+#' rsf <- ranger::ranger(survival::Surv(time, status) ~ ., data = lung_clean, num.trees = 100)
 #' score_oob(rsf, lung_clean[, -c(2, 3)], survival::Surv(lung_clean$time, lung_clean$status))
 score_oob <- function(model, X, y) {
   num_trees <- seq(2, model$num.trees, 50)
@@ -39,7 +39,7 @@ score_oob <- function(model, X, y) {
 
   chf |>
     dplyr::summarize(dplyr::across(dplyr::everything(), function(x) calculate_cindex(x, y))) |>
-    tidyr::pivot_longer(cols=dplyr::everything(), names_to="num_trees", values_to="c_index") |>
+    tidyr::pivot_longer(cols = dplyr::everything(), names_to = "num_trees", values_to = "c_index") |>
     dplyr::mutate(num_trees = as.numeric(num_trees))
 }
 
@@ -48,8 +48,8 @@ calculate_chf <- function(model, inbag_counts, X, y, n_tree_seq) {
   # make predictions
   p <- stats::predict(
     model,
-    data=X,
-    predict.all=TRUE
+    data = X,
+    predict.all = TRUE
   )
 
   # reformat to sample x tree x time
@@ -63,7 +63,7 @@ calculate_chf <- function(model, inbag_counts, X, y, n_tree_seq) {
 
   for (i in seq_along(n_tree_seq)) {
     num_trees <- n_tree_seq[i]
-    mean_chf <- rowMeans(chf[,,1:num_trees], dims=2, na.rm=TRUE)
+    mean_chf <- rowMeans(chf[, , 1:num_trees], dims = 2, na.rm = TRUE)
     sum_chf[[i]] <- rowSums(mean_chf)
   }
 
