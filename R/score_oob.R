@@ -74,16 +74,5 @@ calculate_chf <- function(model, inbag_counts, X, y, n_tree_seq) {
 
 
 calculate_cindex <- function(preds, y) {
-  result <- tibble::tibble(
-    preds = preds,
-    y = y
-  )
-
-  c_index <- yardstick::concordance_survival(
-    data = result,
-    truth = y,
-    estimate = preds
-  ) |>
-    dplyr::select(.estimate) |>
-    dplyr::pull()
+  c_index <- yardstick::concordance_survival_vec(y, preds)
 }
