@@ -23,6 +23,10 @@ score_oob <- function(model, X, y) {
     stop("Model must be run with `keep.inbag=TRUE`")
   }
 
+  if(model$treetype != "Survival") {
+    stop(paste0("Unsupported treetype: ", model$treetype))
+  }
+
   num_trees <- seq(2, model$num.trees, 50)
 
   # get inbag counts
