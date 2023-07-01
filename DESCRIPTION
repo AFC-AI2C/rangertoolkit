@@ -1,5 +1,5 @@
 Package: rangertoolkit
-Title: Utilities for Ranger Models
+Title: Utilities for Ranger Random Forest Models
 Version: 0.0.0.9000
 Authors@R: 
     person("Roberts", "Nelson", , "rnelsonxy@gmail.com", role = c("aut", "cre"),
