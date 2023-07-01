@@ -38,7 +38,7 @@ score_oob <- function(model, X, y) {
   beg_idx <- seq(1, max_row, n)
 
   for (i in beg_idx) {
-    print(i / max_row)
+    message(paste0("Progress: ", round((i / max_row)*100), "%"))
     j <- min(i + n - 1, max_row)
     chf <- calculate_chf(model, inbag_counts[i:j, ], X[i:j, ], y[i:j, ], num_trees)
     chf_list <- append(chf_list, list(chf))
@@ -76,6 +76,7 @@ calculate_chf <- function(model, inbag_counts, X, y, n_tree_seq) {
     sum_chf[[i]] <- rowSums(mean_chf)
   }
 
+  names(sum_chf) <- n_tree_seq
   sum_chf <- dplyr::bind_cols(sum_chf)
   names(sum_chf) <- as.character(n_tree_seq)
   return(sum_chf)
