@@ -19,6 +19,10 @@ score_oob <- function(model, X, y) {
     stop("Model is not from the ranger package.")
   }
 
+  if(!("inbag.counts" %in% attributes(model)$names)) {
+    stop("Model must be run with `keep.inbag=TRUE`")
+  }
+
   num_trees <- seq(2, model$num.trees, 50)
 
   # get inbag counts

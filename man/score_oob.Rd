@@ -23,6 +23,7 @@ Score out-of-bag samples
 ## survival example
 
 lung_clean <- na.omit(survival::lung)
-rsf <- ranger::ranger(survival::Surv(time, status) ~ ., data = lung_clean, num.trees = 100, keep.inbag=TRUE)
+rsf <- ranger::ranger(survival::Surv(time, status) ~ .,
+                      data = lung_clean, num.trees = 100, keep.inbag=TRUE)
 score_oob(rsf, lung_clean[, -c(2, 3)], survival::Surv(lung_clean$time, lung_clean$status))
 }
