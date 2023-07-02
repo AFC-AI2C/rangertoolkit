@@ -51,7 +51,7 @@ score_oob <- function(model, X, y) {
   chf <- dplyr::bind_rows(chf_list)
 
   chf |>
-    dplyr::summarize(dplyr::across(dplyr::everything(), function(x) calculate_cindex(x, y))) |>
+    dplyr::summarize(dplyr::across(dplyr::everything(), function(x) calculate_cindex(-1*x, y))) |>
     tidyr::pivot_longer(cols = dplyr::everything(), names_to = "num_trees", values_to = "c_index") |>
     dplyr::mutate(num_trees = as.numeric(num_trees))
 }
