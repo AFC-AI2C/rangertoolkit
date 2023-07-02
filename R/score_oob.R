@@ -11,19 +11,27 @@
 #' ## survival example
 #'
 #' lung_clean <- na.omit(survival::lung)
-#' rsf <- ranger::ranger(survival::Surv(time, status) ~ .,
-#'                       data = lung_clean, num.trees = 100, keep.inbag=TRUE)
-#' score_oob(rsf, lung_clean[, -c(2, 3)], survival::Surv(lung_clean$time, lung_clean$status))
+#' rsf <- ranger::ranger(
+#'   survival::Surv(time, status) ~ .,
+#'   data = lung_clean,
+#'   num.trees = 100,
+#'   keep.inbag=TRUE
+#' )
+#' score_oob(
+#'   rsf,
+#'   lung_clean[, -c(2, 3)],
+#'   survival::Surv(lung_clean$time, lung_clean$status)
+#' )
 score_oob <- function(model, X, y) {
-  if(!inherits(model, c("ranger"))) {
+  if (!inherits(model, c("ranger"))) {
     stop("Model is not from the ranger package.")
   }
 
-  if(!("inbag.counts" %in% attributes(model)$names)) {
+  if (!("inbag.counts" %in% attributes(model)$names)) {
     stop("Model must be run with `keep.inbag=TRUE`")
   }
 
-  if(model$treetype != "Survival") {
+  if (model$treetype != "Survival") {
     stop(paste0("Unsupported treetype: ", model$treetype))
   }
 
@@ -40,9 +48,10 @@ score_oob <- function(model, X, y) {
   beg_idx <- seq(1, max_row, n)
 
   for (i in beg_idx) {
-    message(paste0("Progress: ", round((i / max_row)*100), "%"))
+    message(paste0("Progress: ", round((i / max_row) * 100), "%"))
     j <- min(i + n - 1, max_row)
-    chf <- calculate_chf(model, inbag_counts[i:j, ], X[i:j, ], y[i:j, ])
+    chf <-
+      calculate_chf(model, inbag_counts[i:j,], X[i:j,], y[i:j,])
     chf_list <- append(chf_list, list(chf))
   }
 
@@ -50,19 +59,22 @@ score_oob <- function(model, X, y) {
 
   num_trees <- NULL
   chf |>
-    dplyr::summarize(dplyr::across(dplyr::everything(), function(x) calculate_cindex(-1*x, y))) |>
-    tidyr::pivot_longer(cols = dplyr::everything(), names_to = "num_trees", values_to = "c_index") |>
+    dplyr::summarize(dplyr::across(dplyr::everything(), function(x)
+      calculate_cindex(-1 * x, y))) |>
+    tidyr::pivot_longer(
+      cols = dplyr::everything(),
+      names_to = "num_trees",
+      values_to = "c_index"
+    ) |>
     dplyr::mutate(num_trees = as.numeric(num_trees))
 }
 
 
 calculate_chf <- function(model, inbag_counts, X, y) {
   # make predictions
-  p <- stats::predict(
-    model,
-    data = X,
-    predict.all = TRUE
-  )
+  p <- stats::predict(model,
+                      data = X,
+                      predict.all = TRUE)
 
   # reformat to sample x tree x time
   chf <- aperm(p$chf, c(1, 3, 2))
@@ -73,8 +85,10 @@ calculate_chf <- function(model, inbag_counts, X, y) {
 
   sum_mean_chf <- list()
 
-  last_chf_sum <- rowSums(chf[, , 1, drop=FALSE], dims = 2, na.rm = TRUE)
-  last_oob_count <- rowSums(!is.na(chf[, , 1, drop=FALSE]), dims = 2, na.rm=TRUE)
+  last_chf_sum <-
+    rowSums(chf[, , 1, drop = FALSE], dims = 2, na.rm = TRUE)
+  last_oob_count <-
+    rowSums(!is.na(chf[, , 1, drop = FALSE]), dims = 2, na.rm = TRUE)
 
   sum_mean_chf[[1]] <- rowSums(last_chf_sum / last_oob_count)
 
@@ -84,7 +98,7 @@ calculate_chf <- function(model, inbag_counts, X, y) {
       rowSums(dims = 2, na.rm = TRUE)
 
     last_oob_count <-
-      abind::abind(last_oob_count, !is.na(chf[, , i, drop = TRUE]), along = 3) |>
+      abind::abind(last_oob_count,!is.na(chf[, , i, drop = TRUE]), along = 3) |>
       rowSums(dims = 2, na.rm = TRUE)
 
     sum_mean_chf[[i]] <- rowSums(last_chf_sum / last_oob_count)
