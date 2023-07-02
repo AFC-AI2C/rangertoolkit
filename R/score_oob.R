@@ -27,8 +27,6 @@ score_oob <- function(model, X, y) {
     stop(paste0("Unsupported treetype: ", model$treetype))
   }
 
-  num_trees <- seq(2, model$num.trees, 50)
-
   # get inbag counts
   inbag_counts <- model$inbag.counts
   names(inbag_counts) <- 1:model$num.trees
@@ -44,12 +42,13 @@ score_oob <- function(model, X, y) {
   for (i in beg_idx) {
     message(paste0("Progress: ", round((i / max_row)*100), "%"))
     j <- min(i + n - 1, max_row)
-    chf <- calculate_chf(model, inbag_counts[i:j, ], X[i:j, ], y[i:j, ], num_trees)
+    chf <- calculate_chf(model, inbag_counts[i:j, ], X[i:j, ], y[i:j, ])
     chf_list <- append(chf_list, list(chf))
   }
 
   chf <- dplyr::bind_rows(chf_list)
 
+  num_trees <- NULL
   chf |>
     dplyr::summarize(dplyr::across(dplyr::everything(), function(x) calculate_cindex(-1*x, y))) |>
     tidyr::pivot_longer(cols = dplyr::everything(), names_to = "num_trees", values_to = "c_index") |>
@@ -57,7 +56,7 @@ score_oob <- function(model, X, y) {
 }
 
 
-calculate_chf <- function(model, inbag_counts, X, y, n_tree_seq) {
+calculate_chf <- function(model, inbag_counts, X, y) {
   # make predictions
   p <- stats::predict(
     model,
@@ -72,18 +71,27 @@ calculate_chf <- function(model, inbag_counts, X, y, n_tree_seq) {
   # cast back to sample x time x tree
   chf <- aperm(chf, c(1, 3, 2))
 
-  sum_chf <- list()
+  sum_mean_chf <- list()
 
-  for (i in seq_along(n_tree_seq)) {
-    num_trees <- n_tree_seq[i]
-    mean_chf <- rowMeans(chf[, , 1:num_trees], dims = 2, na.rm = TRUE)
-    sum_chf[[i]] <- rowSums(mean_chf)
+  last_chf_sum <- rowSums(chf[, , 1, drop=FALSE], dims = 2, na.rm = TRUE)
+  last_oob_count <- rowSums(!is.na(chf[, , 1, drop=FALSE]), dims = 2, na.rm=TRUE)
+
+  sum_mean_chf[[1]] <- rowSums(last_chf_sum / last_oob_count)
+
+  for (i in 2:model$num.trees) {
+    last_chf_sum <-
+      abind::abind(last_chf_sum, chf[, , i, drop = TRUE], along = 3) |>
+      rowSums(dims = 2, na.rm = TRUE)
+
+    last_oob_count <-
+      abind::abind(last_oob_count, !is.na(chf[, , i, drop = TRUE]), along = 3) |>
+      rowSums(dims = 2, na.rm = TRUE)
+
+    sum_mean_chf[[i]] <- rowSums(last_chf_sum / last_oob_count)
   }
 
-  names(sum_chf) <- n_tree_seq
-  sum_chf <- dplyr::bind_cols(sum_chf)
-  names(sum_chf) <- as.character(n_tree_seq)
-  return(sum_chf)
+  names(sum_mean_chf) <- 1:model$num.trees
+  sum_mean_chf <- dplyr::bind_cols(sum_mean_chf)
 }
 
 

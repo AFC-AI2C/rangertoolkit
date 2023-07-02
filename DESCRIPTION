@@ -13,7 +13,8 @@ Imports:
     stats,
     dplyr,
     tidyr,
-    yardstick
+    yardstick,
+    abind
 Suggests:
     survival,
     ranger,
