@@ -20,7 +20,22 @@ A tibble summarizing OOB performance.
 Score out-of-bag samples
 }
 \examples{
-## survival example
+
+# regression
+
+regression_model <- ranger::ranger(
+  mpg ~ .,
+  data = mtcars,
+  num.trees = 100,
+  keep.inbag = TRUE
+)
+score_oob(
+  regression_model,
+  mtcars[, -1],
+  mtcars[, 1]
+)
+
+# survival
 
 lung_clean <- na.omit(survival::lung)
 rsf <- ranger::ranger(

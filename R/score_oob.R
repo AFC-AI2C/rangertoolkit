@@ -8,7 +8,22 @@
 #' @export
 #'
 #' @examples
-#' ## survival example
+#'
+#' # regression
+#'
+#' regression_model <- ranger::ranger(
+#'   mpg ~ .,
+#'   data = mtcars,
+#'   num.trees = 100,
+#'   keep.inbag = TRUE
+#' )
+#' score_oob(
+#'   regression_model,
+#'   mtcars[, -1],
+#'   mtcars[, 1]
+#' )
+#'
+#' # survival
 #'
 #' lung_clean <- na.omit(survival::lung)
 #' rsf <- ranger::ranger(
@@ -31,7 +46,7 @@ score_oob <- function(model, X, y) {
     stop("Model must be run with `keep.inbag=TRUE`")
   }
 
-  if (model$treetype != "Survival") {
+  if (!(model$treetype %in% c("Survival", "Regression"))) {
     stop(paste0("Unsupported treetype: ", model$treetype))
   }
 
@@ -41,14 +56,18 @@ score_oob <- function(model, X, y) {
   inbag_counts <- dplyr::bind_cols(inbag_counts)
 
   # get oob predictions
-  oob_predictions <- predict_survival(model, inbag_counts, X)
+  oob_predictions <- predict(model, inbag_counts, X)
   column_names <- colnames(oob_predictions)
   oob_predictions[["y"]] <- y
 
   # establish scoring metrics
-  scoring_metrics <- yardstick::metric_set(yardstick::concordance_survival)
+  scoring_metrics <- switch(
+    model$treetype,
+    "Survival" = yardstick::metric_set(yardstick::concordance_survival),
+    "Regression" = yardstick::metric_set(yardstick::rmse)
+  )
 
-  # score the oob predictions
+  # score the out-of-bag predictions
   num_trees <- NULL
   purrr::map_df(
     column_names,
@@ -57,6 +76,30 @@ score_oob <- function(model, X, y) {
                     num_trees = as.numeric(num_trees))
   ) |>
     dplyr::relocate(num_trees)
+}
+
+
+predict <- function(model, inbag_counts, X) {
+  switch(model$treetype,
+         "Regression" = predict_regression(model, inbag_counts, X),
+         "Survival" = predict_survival(model, inbag_counts, X))
+}
+
+
+predict_regression <- function(model, inbag_counts, X) {
+  # make predictions
+  p <- stats::predict(model,
+                      data = X,
+                      predict.all = TRUE)
+  predictions <- p$predictions
+
+  # remove predictions that had the sample in-bag
+  predictions[inbag_counts != 0] <- 0
+
+  # calculate the average out-of-bag prediction
+  oob_predictions <-
+    (t(apply(predictions, 1, cumsum)) / t(apply((inbag_counts == 0), 1, cumsum))) |>
+    dplyr::as_tibble()
 }
 
 
