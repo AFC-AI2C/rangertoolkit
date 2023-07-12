@@ -40,6 +40,27 @@ score_oob <- function(model, X, y) {
   names(inbag_counts) <- 1:model$num.trees
   inbag_counts <- dplyr::bind_cols(inbag_counts)
 
+  # get oob predictions
+  oob_predictions <- predict_survival(model, inbag_counts, X)
+  column_names <- colnames(oob_predictions)
+  oob_predictions[["y"]] <- y
+
+  # establish scoring metrics
+  scoring_metrics <- yardstick::metric_set(yardstick::concordance_survival)
+
+  # score the oob predictions
+  num_trees <- NULL
+  purrr::map_df(
+    column_names,
+    \(x) scoring_metrics(oob_predictions, estimate = x, truth = y) |>
+      dplyr::mutate(num_trees = x,
+                    num_trees = as.numeric(num_trees))
+  ) |>
+    dplyr::relocate(num_trees)
+}
+
+
+predict_survival <- function(model, inbag_counts, X) {
   # process data n observations at a time
   chf_list <- c()
 
@@ -50,27 +71,16 @@ score_oob <- function(model, X, y) {
   for (i in beg_idx) {
     message(paste0("Progress: ", round((i / max_row) * 100), "%"))
     j <- min(i + n - 1, max_row)
-    chf <-
-      calculate_chf(model, inbag_counts[i:j,], X[i:j,], y[i:j,])
+    chf <- calculate_chf(model, inbag_counts[i:j,], X[i:j,])
     chf_list <- append(chf_list, list(chf))
   }
 
-  chf <- dplyr::bind_rows(chf_list)
-
-  num_trees <- NULL
-  chf |>
-    dplyr::summarize(dplyr::across(dplyr::everything(), function(x)
-      calculate_cindex(-1 * x, y))) |>
-    tidyr::pivot_longer(
-      cols = dplyr::everything(),
-      names_to = "num_trees",
-      values_to = "c_index"
-    ) |>
-    dplyr::mutate(num_trees = as.numeric(num_trees))
+  # the cumulative CHF is inversely proportional to survival
+  inverse_chf <- -1 * dplyr::bind_rows(chf_list)
 }
 
 
-calculate_chf <- function(model, inbag_counts, X, y) {
+calculate_chf <- function(model, inbag_counts, X) {
   # make predictions
   p <- stats::predict(model,
                       data = X,
@@ -106,9 +116,4 @@ calculate_chf <- function(model, inbag_counts, X, y) {
 
   names(sum_mean_chf) <- 1:model$num.trees
   sum_mean_chf <- dplyr::bind_cols(sum_mean_chf)
-}
-
-
-calculate_cindex <- function(preds, y) {
-  c_index <- yardstick::concordance_survival_vec(y, preds)
 }

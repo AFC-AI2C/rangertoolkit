@@ -12,7 +12,7 @@ RoxygenNote: 7.2.3
 Imports:
     stats,
     dplyr,
-    tidyr,
+    purrr,
     yardstick,
     abind
 Suggests:
