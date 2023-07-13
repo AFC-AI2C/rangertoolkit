@@ -35,6 +35,20 @@ score_oob(
   mtcars[, 1]
 )
 
+# classification
+
+classification_model <- ranger::ranger(
+  Species ~ .,
+  data = iris,
+  num.trees = 100,
+  keep.inbag = TRUE
+)
+score_oob(
+  classification_model,
+  iris[, -5],
+  iris[, 5]
+)
+
 # survival
 
 lung_clean <- na.omit(survival::lung)

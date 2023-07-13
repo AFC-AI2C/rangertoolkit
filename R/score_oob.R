@@ -23,6 +23,20 @@
 #'   mtcars[, 1]
 #' )
 #'
+#' # classification
+#'
+#' classification_model <- ranger::ranger(
+#'   Species ~ .,
+#'   data = iris,
+#'   num.trees = 100,
+#'   keep.inbag = TRUE
+#' )
+#' score_oob(
+#'   classification_model,
+#'   iris[, -5],
+#'   iris[, 5]
+#' )
+#'
 #' # survival
 #'
 #' lung_clean <- na.omit(survival::lung)
@@ -46,7 +60,7 @@ score_oob <- function(model, X, y) {
     stop("Model must be run with `keep.inbag=TRUE`")
   }
 
-  if (!(model$treetype %in% c("Survival", "Regression"))) {
+  if (!(model$treetype %in% c("Survival", "Regression", "Classification"))) {
     stop(paste0("Unsupported treetype: ", model$treetype))
   }
 
@@ -58,23 +72,25 @@ score_oob <- function(model, X, y) {
   # get oob predictions
   oob_predictions <- predict(model, inbag_counts, X)
   column_names <- colnames(oob_predictions)
-  oob_predictions[["y"]] <- y
 
   # establish scoring metrics
   scoring_metrics <- switch(
     model$treetype,
+    "Regression" = yardstick::metric_set(yardstick::rmse),
+    "Classification" = yardstick::metric_set(yardstick::accuracy),
     "Survival" = yardstick::metric_set(yardstick::concordance_survival),
-    "Regression" = yardstick::metric_set(yardstick::rmse)
   )
 
   # score the out-of-bag predictions
-  num_trees <- NULL
+  num_trees <- obs <- pred <- NULL
   purrr::map_df(
-    column_names,
-    \(x) scoring_metrics(oob_predictions, estimate = x, truth = y) |>
-      dplyr::mutate(num_trees = x,
-                    num_trees = as.numeric(num_trees))
-  ) |>
+    1:model$num.trees,
+    \(t) scoring_metrics(oob_predictions |>
+                           dplyr::filter(num_trees == t) |>
+                           dplyr::mutate(obs = y),
+                         obs,
+                         estimate = pred) |>
+      dplyr::mutate(num_trees = as.numeric(t))) |>
     dplyr::relocate(num_trees)
 }
 
@@ -82,6 +98,7 @@ score_oob <- function(model, X, y) {
 predict <- function(model, inbag_counts, X) {
   switch(model$treetype,
          "Regression" = predict_regression(model, inbag_counts, X),
+         "Classification" = predict_classification(model, inbag_counts, X),
          "Survival" = predict_survival(model, inbag_counts, X))
 }
 
@@ -97,9 +114,49 @@ predict_regression <- function(model, inbag_counts, X) {
   predictions[inbag_counts != 0] <- 0
 
   # calculate the average out-of-bag prediction
+  id <- num_trees <- NULL
+
   oob_predictions <-
     (t(apply(predictions, 1, cumsum)) / t(apply((inbag_counts == 0), 1, cumsum))) |>
-    dplyr::as_tibble()
+    dplyr::as_tibble() |>
+    tibble::rowid_to_column("id") |>
+    tidyr::pivot_longer(cols = -id,
+                        names_to = "num_trees",
+                        values_to = "pred") |>
+    dplyr::mutate(num_trees = as.numeric(num_trees))
+}
+
+
+predict_classification <- function(model, inbag_counts, X) {
+  # make predictions
+  p <- stats::predict(model,
+                      data = X,
+                      predict.all = TRUE)
+  predictions <- p$predictions
+
+  # remove predictions that had the sample in-bag
+  predictions[inbag_counts != 0] <- 0
+
+  # calculate the average out-of-bag prediction
+  id <- num_trees <- prob <- . <- pred <- NULL
+
+  oob_predictions <-
+    purrr::map_df(
+      model$forest$class.values,
+      \(x) (t(apply((predictions == x), 1, cumsum)) /
+            t(apply((inbag_counts == 0), 1, cumsum))) |>
+        dplyr::as_tibble() |>
+        tibble::rowid_to_column("id") |>
+        dplyr::mutate(class = model$forest$levels[x])) |>
+    tidyr::pivot_longer(cols = -c(id, class),
+                        names_to = "num_trees",
+                        values_to = "prob") |>
+    dplyr::group_by(id, num_trees) |>
+    tidyr::pivot_wider(names_from = class, values_from = prob) |>
+    dplyr::ungroup() %>%
+    dplyr::mutate(num_trees = as.numeric(num_trees),
+                  pred = names(.[, -c(1, 2)])[max.col(.[, -c(1, 2)])],
+                  pred = as.factor(pred))
 }
 
 
@@ -119,7 +176,16 @@ predict_survival <- function(model, inbag_counts, X) {
   }
 
   # the cumulative CHF is inversely proportional to survival
-  inverse_chf <- -1 * dplyr::bind_rows(chf_list)
+  id <- num_trees <- pred <- NULL
+
+  inverse_chf <-
+    dplyr::bind_rows(chf_list) |>
+    tibble::rowid_to_column("id") |>
+    tidyr::pivot_longer(cols = -id,
+                        names_to = "num_trees",
+                        values_to = "pred") |>
+    dplyr::mutate(num_trees = as.numeric(num_trees),
+                  pred = -1 * pred)
 }
 
 

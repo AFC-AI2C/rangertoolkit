@@ -14,10 +14,12 @@ Imports:
     dplyr,
     purrr,
     yardstick,
-    abind
+    abind,
+    tidyr,
+    tibble,
+    magrittr
 Suggests:
     survival,
     ranger,
-    magrittr,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
