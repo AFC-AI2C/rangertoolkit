@@ -1,10 +1,25 @@
-#' Score out-of-bag samples
+#' Score out-of-bag samples for a trained ranger model.
+#'
+#' @details
+#' The scoring metrics are determined by the ranger model '`treetype`'
+#' attribute. Regression models report root-mean-square error, classification
+#' models report accuracy, and survival models report concordance index. For
+#' survival models, the concordance index is calculated by comparing observed
+#' survival times to the sum of the predicted cumulative hazard over unique
+#' event times as reported by Ishwaran et al. `[1]`.
+#'
+#' @references
+#' `[1]` H. Ishwaran, U. B. Kogalur, E. H. Blackstone, and M. S.
+#' Lauer, “Random survival forests,” The Annals of Applied Statistics, vol. 2,
+#' no. 3, pp. 841–860, Sep. 2008, doi: 10.1214/08-AOAS169.
+#'
 #'
 #' @param model A ranger random forest model.
 #' @param X Training data feature matrix.
 #' @param y Training data response vector.
 #'
-#' @return A tibble summarizing OOB performance.
+#' @return A tibble summarizing out-of-bag performance as a function of number
+#'   of trees.
 #' @export
 #'
 #' @examples

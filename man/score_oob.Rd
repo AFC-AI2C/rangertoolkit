@@ -2,7 +2,7 @@
 % Please edit documentation in R/score_oob.R
 \name{score_oob}
 \alias{score_oob}
-\title{Score out-of-bag samples}
+\title{Score out-of-bag samples for a trained ranger model.}
 \usage{
 score_oob(model, X, y)
 }
@@ -14,10 +14,19 @@ score_oob(model, X, y)
 \item{y}{Training data response vector.}
 }
 \value{
-A tibble summarizing OOB performance.
+A tibble summarizing out-of-bag performance as a function of number
+of trees.
 }
 \description{
-Score out-of-bag samples
+Score out-of-bag samples for a trained ranger model.
+}
+\details{
+The scoring metrics are determined by the ranger model '\code{treetype}'
+attribute. Regression models report root-mean-square error, classification
+models report accuracy, and survival models report concordance index. For
+survival models, the concordance index is calculated by comparing observed
+survival times to the sum of the predicted cumulative hazard over unique
+event times as reported by Ishwaran et al. \verb{[1]}.
 }
 \examples{
 
@@ -63,4 +72,9 @@ score_oob(
   lung_clean[, -c(2, 3)],
   survival::Surv(lung_clean$time, lung_clean$status)
 )
+}
+\references{
+\verb{[1]} H. Ishwaran, U. B. Kogalur, E. H. Blackstone, and M. S.
+Lauer, “Random survival forests,” The Annals of Applied Statistics, vol. 2,
+no. 3, pp. 841–860, Sep. 2008, doi: 10.1214/08-AOAS169.
 }
