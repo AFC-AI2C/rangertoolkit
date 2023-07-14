@@ -20,10 +20,11 @@ survival models.
 
 ## Installation
 
-You can install the development version of `rangertoolkit` like so:
+You can install the development version of `rangertoolkit` with
+devtools.
 
 ``` r
-# update once pushed to a GitHub repository
+devtools::install_github("https://github.com/AFC-AI2C/rangertoolkit/")
 ```
 
 ## Examples
