@@ -4,7 +4,7 @@
 \alias{score_oob}
 \title{Score out-of-bag samples for a trained ranger model.}
 \usage{
-score_oob(model, X, y)
+score_oob(model, X, y, scoring_metrics = NULL)
 }
 \arguments{
 \item{model}{A ranger random forest model.}
@@ -12,6 +12,10 @@ score_oob(model, X, y)
 \item{X}{Training data feature matrix.}
 
 \item{y}{Training data response vector.}
+
+\item{scoring_metrics}{A yardstick::metric_set for evaluating the out-of-bag
+error. If not provided, the defaults are rmse and r-squared for regression,
+accuracy and auc-roc for classification, and c-index for survival.}
 }
 \value{
 A tibble summarizing out-of-bag performance as a function of number

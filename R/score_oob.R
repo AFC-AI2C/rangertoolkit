@@ -17,6 +17,9 @@
 #' @param model A ranger random forest model.
 #' @param X Training data feature matrix.
 #' @param y Training data response vector.
+#' @param scoring_metrics A yardstick::metric_set for evaluating the out-of-bag
+#'   error. If not provided, the defaults are rmse and r-squared for regression,
+#'   accuracy and auc-roc for classification, and c-index for survival.
 #'
 #' @return A tibble summarizing out-of-bag performance as a function of number
 #'   of trees.
@@ -66,7 +69,7 @@
 #'   lung_clean[, -c(2, 3)],
 #'   survival::Surv(lung_clean$time, lung_clean$status)
 #' )
-score_oob <- function(model, X, y) {
+score_oob <- function(model, X, y, scoring_metrics = NULL) {
   if (!inherits(model, c("ranger"))) {
     stop("Model is not from the ranger package.")
   }
@@ -79,6 +82,11 @@ score_oob <- function(model, X, y) {
     stop(paste0("Unsupported treetype: ", model$treetype))
   }
 
+  if (!is.null(scoring_metrics) && model$treetype == "Survival") {
+    message("Custom metric sets not supported for survival forests. Defaulting to c-index.")
+    scoring_metrics = NULL
+  }
+
   # get inbag counts
   inbag_counts <- model$inbag.counts
   names(inbag_counts) <- 1:model$num.trees
@@ -89,12 +97,14 @@ score_oob <- function(model, X, y) {
   column_names <- colnames(oob_predictions)
 
   # establish scoring metrics
-  scoring_metrics <- switch(
-    model$treetype,
-    "Regression" = yardstick::metric_set(yardstick::rmse, yardstick::rsq),
-    "Classification" = yardstick::metric_set(yardstick::accuracy, yardstick::roc_auc),
-    "Survival" = yardstick::metric_set(yardstick::concordance_survival),
-  )
+  if (is.null(scoring_metrics)) {
+    scoring_metrics <- switch(
+      model$treetype,
+      "Regression" = yardstick::metric_set(yardstick::rmse, yardstick::rsq),
+      "Classification" = yardstick::metric_set(yardstick::accuracy, yardstick::roc_auc),
+      "Survival" = yardstick::metric_set(yardstick::concordance_survival),
+    )
+  }
 
   # score the out-of-bag predictions
   num_trees <- obs <- pred <- NULL
