@@ -91,8 +91,8 @@ score_oob <- function(model, X, y) {
   # establish scoring metrics
   scoring_metrics <- switch(
     model$treetype,
-    "Regression" = yardstick::metric_set(yardstick::rmse),
-    "Classification" = yardstick::metric_set(yardstick::accuracy),
+    "Regression" = yardstick::metric_set(yardstick::rmse, yardstick::rsq),
+    "Classification" = yardstick::metric_set(yardstick::accuracy, yardstick::roc_auc),
     "Survival" = yardstick::metric_set(yardstick::concordance_survival),
   )
 
@@ -103,8 +103,11 @@ score_oob <- function(model, X, y) {
     \(t) scoring_metrics(oob_predictions |>
                            dplyr::filter(num_trees == t) |>
                            dplyr::mutate(obs = y),
-                         obs,
-                         estimate = pred) |>
+                         truth = obs,
+                         estimate = pred,
+                         na_rm = TRUE,
+                         case_weights = NULL,
+                         dplyr::starts_with(".pred_")) |>
       dplyr::mutate(num_trees = as.numeric(t))) |>
     dplyr::relocate(num_trees)
 }
@@ -167,10 +170,13 @@ predict_classification <- function(model, inbag_counts, X) {
                         names_to = "num_trees",
                         values_to = "prob") |>
     dplyr::group_by(id, num_trees) |>
-    tidyr::pivot_wider(names_from = class, values_from = prob) |>
+    tidyr::pivot_wider(names_from = class,
+                       values_from = prob,
+                       names_prefix = ".pred_") |>
     dplyr::ungroup() %>%
     dplyr::mutate(num_trees = as.numeric(num_trees),
                   pred = names(.[, -c(1, 2)])[max.col(.[, -c(1, 2)])],
+                  pred = gsub(".pred_", "", pred),
                   pred = as.factor(pred))
 }
 
