@@ -57,12 +57,12 @@ print(head(regression_score))
 #> # A tibble: 6 × 4
 #>   num_trees .metric .estimator .estimate
 #>       <dbl> <chr>   <chr>          <dbl>
-#> 1         1 rmse    standard        3.50
-#> 2         2 rmse    standard        3.91
-#> 3         3 rmse    standard        3.59
-#> 4         4 rmse    standard        3.22
-#> 5         5 rmse    standard        3.09
-#> 6         6 rmse    standard        3.00
+#> 1         1 rmse    standard       3.50 
+#> 2         1 rsq     standard       0.405
+#> 3         2 rmse    standard       3.91 
+#> 4         2 rsq     standard       0.611
+#> 5         3 rmse    standard       3.59 
+#> 6         3 rsq     standard       0.685
 ```
 
 ``` r
@@ -71,9 +71,11 @@ ggplot(regression_score,
            y = .estimate)) +
   geom_point() +
   geom_line() +
+  facet_grid(rows = vars(.metric),
+             scales = "free_y") +
   ggtitle("Regression Score") +
   xlab("Number of Trees") +
-  ylab("RMSE") +
+  ylab("Metric") +
   theme_bw()
 ```
 
@@ -102,22 +104,24 @@ print(head(classification_score))
 #>   num_trees .metric  .estimator .estimate
 #>       <dbl> <chr>    <chr>          <dbl>
 #> 1         1 accuracy multiclass     0.946
-#> 2         2 accuracy multiclass     0.942
-#> 3         3 accuracy multiclass     0.963
-#> 4         4 accuracy multiclass     0.960
-#> 5         5 accuracy multiclass     0.963
-#> 6         6 accuracy multiclass     0.951
+#> 2         1 roc_auc  hand_till      0.959
+#> 3         2 accuracy multiclass     0.942
+#> 4         2 roc_auc  hand_till      0.956
+#> 5         3 accuracy multiclass     0.963
+#> 6         3 roc_auc  hand_till      0.978
 ```
 
 ``` r
 ggplot(classification_score,
        aes(x = num_trees,
-           y = 1 - .estimate)) +
+           y = .estimate)) +
   geom_point() +
   geom_line() +
+  facet_grid(rows = vars(.metric),
+             scales = "free_y") +
   ggtitle("Classification Score") +
   xlab("Number of Trees") +
-  ylab("1 - Accuracy") +
+  ylab("Metric") +
   theme_bw()
 ```
 

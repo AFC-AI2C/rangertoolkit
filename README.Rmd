@@ -66,9 +66,11 @@ ggplot(regression_score,
            y = .estimate)) +
   geom_point() +
   geom_line() +
+  facet_grid(rows = vars(.metric),
+             scales = "free_y") +
   ggtitle("Regression Score") +
   xlab("Number of Trees") +
-  ylab("RMSE") +
+  ylab("Metric") +
   theme_bw()
 ```
 
@@ -95,12 +97,14 @@ print(head(classification_score))
 ```{r classification_plot}
 ggplot(classification_score,
        aes(x = num_trees,
-           y = 1 - .estimate)) +
+           y = .estimate)) +
   geom_point() +
   geom_line() +
+  facet_grid(rows = vars(.metric),
+             scales = "free_y") +
   ggtitle("Classification Score") +
   xlab("Number of Trees") +
-  ylab("1 - Accuracy") +
+  ylab("Metric") +
   theme_bw()
 ```
 
