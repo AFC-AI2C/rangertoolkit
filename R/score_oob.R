@@ -93,7 +93,7 @@ score_oob <- function(model, X, y, scoring_metrics = NULL) {
   inbag_counts <- dplyr::bind_cols(inbag_counts)
 
   # get oob predictions
-  oob_predictions <- predict(model, inbag_counts, X)
+  oob_predictions <- predict_oob(model, inbag_counts, X)
   column_names <- colnames(oob_predictions)
 
   # establish scoring metrics
@@ -123,7 +123,7 @@ score_oob <- function(model, X, y, scoring_metrics = NULL) {
 }
 
 
-predict <- function(model, inbag_counts, X) {
+predict_oob <- function(model, inbag_counts, X) {
   switch(model$treetype,
          "Regression" = predict_regression(model, inbag_counts, X),
          "Classification" = predict_classification(model, inbag_counts, X),
